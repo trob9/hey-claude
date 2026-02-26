@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Config with secrets
+.env
+config.local.yaml
+
+# mlx-whisper model cache (large, downloaded on demand)
+# ~/.cache/huggingface/ - system-wide, not project
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Runtime state
+.session_state
+
+# IDE
+.idea/
+.vscode/
+*.swp

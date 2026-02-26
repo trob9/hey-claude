@@ -1,0 +1,36 @@
+# hey-claude configuration
+
+audio:
+  sample_rate: 16000        # Hz - Whisper requires 16kHz
+  channels: 1               # Mono
+  chunk_duration: 0.03      # seconds per VAD frame (30ms for webrtcvad)
+  silence_threshold: 1.5    # seconds of silence before stopping recording
+  energy_threshold: 0.01    # RMS energy above this = speech detected
+  max_recording_duration: 30 # seconds - max single utterance
+
+wake_word:
+  phrase: "hey claude"      # Wake phrase to listen for
+  fuzzy_match: true         # Also match "hey claude" with minor transcription errors
+
+stt:
+  wake_model: "tiny"    # Fast, cheap - wake word detection (72MB, from Azure CDN)
+  command_model: "small" # Better accuracy - full commands (461MB, from Azure CDN)
+  language: "en"
+
+session:
+  timeout: 30               # seconds before returning to wake word mode
+  feedback_sound: true      # Play audio feedback on wake word detection
+
+tts:
+  voice: "Samantha"         # macOS voice. Options: Alex, Samantha, Daniel, Karen
+  rate: 185                 # Words per minute (default ~200, slower = clearer)
+
+claude:
+  binary: "/usr/local/bin/claude"
+  cwd: "~"                  # Working directory for Claude Code CLI
+  max_turns: 50             # Max tool-call turns per request
+
+# These are read from environment (set in ~/.zshrc already):
+# CLAUDE_CODE_USE_VERTEX=1
+# CLOUD_ML_REGION=us-east5
+# ANTHROPIC_VERTEX_PROJECT_ID=anz-x-claude-sit-92e7
