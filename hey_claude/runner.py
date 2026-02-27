@@ -77,22 +77,11 @@ def run_claude(
     """
     resolved_cwd = str(Path(cwd or "~").expanduser()) if cwd else str(Path.home())
 
-    # Tools explicitly allowed without prompting.
-    # Using --allowedTools instead of --dangerously-skip-permissions so we're
-    # opting in to specific tools rather than bypassing all permission checks.
-    ALLOWED_TOOLS = ",".join([
-        "Bash", "Read", "Write", "Edit", "MultiEdit",
-        "Grep", "Glob", "WebFetch", "WebSearch",
-        "TodoWrite", "TodoRead",
-        "NotebookRead", "NotebookEdit",
-        "Task",
-    ])
-
     # Build the CLI command
     cmd = [
         CLAUDE_BINARY,
         "-p", prompt,
-        "--allowedTools", ALLOWED_TOOLS,
+        "--permission-mode", "bypassPermissions",  # Allow all tools, no prompts
         "--output-format", "stream-json",
         "--verbose",                       # Required when using stream-json + --print
         "--include-partial-messages",
