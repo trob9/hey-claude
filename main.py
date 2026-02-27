@@ -215,14 +215,15 @@ def main():
                     current_model = baby_model
                     print(f"[WAKE:BABY] Detected: '{quick_transcript}'", flush=True)
                     command_part = stt.strip_baby_wake_phrase(quick_transcript)
-                    # Non-blocking: feedback plays while mic is already open for the command
-                    speak("yeah?", mode="baby", block=False)
+                    speak("yeah?", mode="baby")
+                    time.sleep(0.15)  # Let room reverb clear before mic opens
                 elif stt.contains_wake_phrase(quick_transcript, wake_phrase):
                     current_mode = "normal"
                     current_model = args.model or None
                     print(f"[WAKE] Detected: '{quick_transcript}'", flush=True)
                     command_part = stt.strip_wake_phrase(quick_transcript, wake_phrase)
                     speak("Yeah?")
+                    time.sleep(0.15)
                 else:
                     continue
 
