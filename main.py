@@ -222,7 +222,7 @@ def main():
                     current_model = args.model or None
                     print(f"[WAKE] Detected: '{quick_transcript}'", flush=True)
                     command_part = stt.strip_wake_phrase(quick_transcript, wake_phrase)
-                    speak("How can I help?", block=False)
+                    speak("mmhm")
                 else:
                     continue
 
