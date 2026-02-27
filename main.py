@@ -196,13 +196,6 @@ def main():
                 if not transcript.strip():
                     continue
 
-                # Allow "goodbye", "stop", "exit" to end the session
-                if any(w in transcript.lower() for w in ["goodbye", "stop listening", "exit", "quit"]):
-                    session.clear()
-                    speak("Goodbye!", mode=current_mode)
-                    print("\nSession ended.\n", flush=True)
-                    continue
-
                 # Inject history so CC has context even if --resume fails
                 history = session.history_prompt()
                 prompt = (history + "\n\n" if history else "") + transcript + build_context()
@@ -244,8 +237,17 @@ def main():
 
                 prompt = command_part + build_context()
 
+            # ── Goodbye check (anywhere in the flow) ─────────────────────────
+            raw_command = prompt.split("[Context:")[0].strip()
+            if any(w in raw_command.lower() for w in ["goodbye", "stop listening", "exit", "quit"]):
+                session.clear()
+                current_mode = "normal"
+                current_model = args.model or None
+                speak("Goodbye!")
+                print("\nSession ended.\n", flush=True)
+                continue
+
             # ── Send to Claude ────────────────────────────────────────────────
-            # (no history injection on first turn — session is fresh)
             print(f"[PROMPT] {prompt[:120]}", flush=True)
 
             def on_status(status_text: str):
