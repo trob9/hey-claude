@@ -106,7 +106,7 @@ def main():
     session_timeout = float(session_cfg.get("timeout", 30))
 
     # Convenience wrapper for TTS
-    def speak(text: str):
+    def speak(text: str, rate: int = rate):
         say(text, voice=voice, rate=rate)
 
     # Load system prompt
@@ -181,7 +181,9 @@ def main():
                     print("\nSession ended.\n", flush=True)
                     continue
 
-                prompt = transcript + build_context()
+                # Inject history so CC has context even if --resume fails
+                history = session.history_prompt()
+                prompt = (history + "\n\n" if history else "") + transcript + build_context()
 
             else:
                 # ── IDLE MODE ─────────────────────────────────────────────────
@@ -203,7 +205,7 @@ def main():
                 print(f"[WAKE] Detected: '{quick_transcript}'", flush=True)
 
                 # Audio acknowledgement
-                speak("mmhm", rate=200)
+                speak("How can I help?", rate=200)
 
                 # Strip the wake phrase - is there a command in the same utterance?
                 command_part = stt.strip_wake_phrase(quick_transcript, wake_phrase)
@@ -224,6 +226,7 @@ def main():
                 prompt = command_part + build_context()
 
             # ── Send to Claude ────────────────────────────────────────────────
+            # (no history injection on first turn — session is fresh)
             print(f"[PROMPT] {prompt[:120]}", flush=True)
 
             def on_status(status_text: str):
@@ -242,9 +245,13 @@ def main():
                 session.update(new_session_id)
                 print(f"[SESSION] Active (ID: {new_session_id[:12]}...)", flush=True)
             else:
-                # Claude didn't return a session ID - still mark active so we
-                # stay in session mode (we just won't be able to resume)
                 session.touch()
+
+            # Record this exchange in local history (fallback if --resume fails)
+            if speak_text and speak_text != "Done.":
+                # Use the raw transcript as the user turn (strip injected history/context)
+                raw_user = prompt.split("[End of history")[- 1].split("[Context:")[0].strip()
+                session.add_history(raw_user, speak_text)
 
             # Speak the final response
             if speak_text:

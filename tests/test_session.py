@@ -67,11 +67,18 @@ def test_time_remaining_zero_when_inactive():
     assert s.time_remaining() == 0.0
 
 
-def test_update_changes_session_id():
+def test_update_keeps_original_when_cc_returns_different_id():
+    """If CC ignores --resume and returns a new session_id, we keep the original."""
     s = Session(timeout=30.0)
-    s.update("first")
-    s.update("second")
-    assert s.session_id == "second"
+    s.update("original-session")
+    s.update("fresh-session-from-cc")  # CC started fresh — should keep "original"
+    assert s.session_id == "original-session"
+
+def test_update_accepts_same_id():
+    s = Session(timeout=30.0)
+    s.update("my-session")
+    s.update("my-session")  # Same ID — resume worked fine
+    assert s.session_id == "my-session"
 
 
 def test_repr():
@@ -79,3 +86,33 @@ def test_repr():
     assert "inactive" in repr(s)
     s.update("abc-123-def-456")
     assert "abc-123" in repr(s)
+
+
+class TestHistory:
+    def test_history_empty_on_new_session(self):
+        s = Session(timeout=30.0)
+        assert s.history_prompt() == ""
+
+    def test_history_prompt_contains_exchanges(self):
+        s = Session(timeout=30.0)
+        s.add_history("list my files", "You have three files on your desktop.")
+        prompt = s.history_prompt()
+        assert "list my files" in prompt
+        assert "three files" in prompt
+
+    def test_history_capped_at_max(self):
+        from hey_claude.session import MAX_HISTORY
+        s = Session(timeout=30.0)
+        for i in range(MAX_HISTORY + 3):
+            s.add_history(f"user turn {i}", f"assistant turn {i}")
+        # Only MAX_HISTORY most recent turns kept
+        prompt = s.history_prompt()
+        assert f"user turn {MAX_HISTORY + 2}" in prompt   # most recent kept
+        assert "user turn 0" not in prompt                # oldest dropped
+
+    def test_clear_wipes_history(self):
+        s = Session(timeout=30.0)
+        s.update("some-id")
+        s.add_history("hello", "world")
+        s.clear()
+        assert s.history_prompt() == ""
