@@ -13,7 +13,7 @@ Voice assistant powered by Claude Code. Say "hey claude", speak your request, an
 ```
 
 - **STT:** openai-whisper (local, tiny for wake word / small for commands)
-- **Claude:** Claude Code CLI via subprocess (`--dangerously-skip-permissions`, stream-json)
+- **Claude:** Claude Code CLI via subprocess (`--allowedTools` explicit list, stream-json)
 - **Auth:** Vertex AI via gcloud ADC (picks up `CLAUDE_CODE_USE_VERTEX` from your shell)
 - **TTS:** macOS built-in `say` (zero setup, offline)
 - **Session:** Conversation context maintained for 30s between turns (say "hey claude" again after timeout)
