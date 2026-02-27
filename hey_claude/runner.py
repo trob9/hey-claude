@@ -77,11 +77,42 @@ def run_claude(
     """
     resolved_cwd = str(Path(cwd or "~").expanduser()) if cwd else str(Path.home())
 
+    # All Claude Code tools explicitly allowed — no permission prompts.
+    ALLOWED_TOOLS = ",".join([
+        "Bash", "BashOutput", "Edit", "ExitPlanMode",
+        "Glob", "Grep", "KillShell", "NotebookEdit",
+        "Read", "SlashCommand", "Task", "TodoWrite",
+        "WebFetch", "Write",
+        # MCP: Playwright browser tools
+        "mcp__plugin_playwright_playwright__browser_click",
+        "mcp__plugin_playwright_playwright__browser_close",
+        "mcp__plugin_playwright_playwright__browser_console_messages",
+        "mcp__plugin_playwright_playwright__browser_drag",
+        "mcp__plugin_playwright_playwright__browser_evaluate",
+        "mcp__plugin_playwright_playwright__browser_file_upload",
+        "mcp__plugin_playwright_playwright__browser_fill_form",
+        "mcp__plugin_playwright_playwright__browser_handle_dialog",
+        "mcp__plugin_playwright_playwright__browser_hover",
+        "mcp__plugin_playwright_playwright__browser_install",
+        "mcp__plugin_playwright_playwright__browser_navigate",
+        "mcp__plugin_playwright_playwright__browser_navigate_back",
+        "mcp__plugin_playwright_playwright__browser_network_requests",
+        "mcp__plugin_playwright_playwright__browser_press_key",
+        "mcp__plugin_playwright_playwright__browser_resize",
+        "mcp__plugin_playwright_playwright__browser_run_code",
+        "mcp__plugin_playwright_playwright__browser_select_option",
+        "mcp__plugin_playwright_playwright__browser_snapshot",
+        "mcp__plugin_playwright_playwright__browser_tabs",
+        "mcp__plugin_playwright_playwright__browser_take_screenshot",
+        "mcp__plugin_playwright_playwright__browser_type",
+        "mcp__plugin_playwright_playwright__browser_wait_for",
+    ])
+
     # Build the CLI command
     cmd = [
         CLAUDE_BINARY,
         "-p", prompt,
-        "--permission-mode", "bypassPermissions",  # Allow all tools, no prompts
+        "--allowedTools", ALLOWED_TOOLS,
         "--output-format", "stream-json",
         "--verbose",                       # Required when using stream-json + --print
         "--include-partial-messages",
