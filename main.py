@@ -25,6 +25,7 @@ import yaml
 # Local modules
 from hey_claude.audio import AudioCapture
 from hey_claude.runner import run_claude
+from hey_claude.fast_runner import run_baby_claude
 from hey_claude.session import Session
 from hey_claude.stt import STT
 from hey_claude.tts import say
@@ -250,34 +251,46 @@ def main():
             def on_status(status_text: str):
                 speak(status_text, rate=rate + 20)  # Slightly faster for status updates
 
-            new_session_id, speak_text = run_claude(
-                prompt=prompt,
-                system_prompt=system_prompt,
-                session_id=session.session_id,
-                cwd=cwd,
-                model=current_model,
-                on_status=on_status,
-            )
-
-            # Update session for conversation continuity
-            if new_session_id:
-                session.update(new_session_id)
-                print(f"[SESSION] Active (ID: {new_session_id[:12]}...)", flush=True)
-            else:
+            if current_mode == "baby":
+                # ── Baby claude: direct SDK streaming, no tools, fast ─────────
+                full_text = run_baby_claude(
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    on_sentence=lambda s: speak(s, mode="baby"),
+                )
+                speak_text = full_text or "Done."
+                # Baby claude sessions don't resume via CC — use touch to keep window open
                 session.touch()
-
-            # Record this exchange in local history (fallback if --resume fails)
-            if speak_text and speak_text != "Done.":
-                # Use the raw transcript as the user turn (strip injected history/context)
-                raw_user = prompt.split("[End of history")[- 1].split("[Context:")[0].strip()
-                session.add_history(raw_user, speak_text)
-
-            # Speak the final response in the correct mode's voice
-            if speak_text:
-                speak(speak_text, mode=current_mode)
-                print(f"[SPEAK:{current_mode.upper()}] {speak_text}", flush=True)
+                if not session.is_active():
+                    # First baby turn: give it a session ID placeholder so is_active() works
+                    session._session_id = "baby-session"
+                    session._last_activity = __import__("time").monotonic()
             else:
-                speak("Done.", mode=current_mode)
+                # ── Normal claude: Claude Code CLI, full tools ────────────────
+                new_session_id, speak_text = run_claude(
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    session_id=session.session_id,
+                    cwd=cwd,
+                    model=current_model,
+                    on_status=on_status,
+                )
+                if new_session_id:
+                    session.update(new_session_id)
+                    print(f"[SESSION] Active (ID: {new_session_id[:12]}...)", flush=True)
+                else:
+                    session.touch()
+
+                # Speak the response (CLI mode — already spoken via on_status for STATUS tags)
+                if speak_text and speak_text != "Done.":
+                    raw_user = prompt.split("[End of history")[- 1].split("[Context:")[0].strip()
+                    session.add_history(raw_user, speak_text)
+
+                if speak_text:
+                    speak(speak_text, mode=current_mode)
+                    print(f"[SPEAK:NORMAL] {speak_text}", flush=True)
+                else:
+                    speak("Done.")
 
         except KeyboardInterrupt:
             break
