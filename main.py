@@ -157,19 +157,23 @@ def main():
                     flush=True,
                 )
 
-                activity = audio.wait_for_activity(timeout=min(remaining, session_timeout))
+                # Single stream: wait for speech AND record it in one call.
+                # This avoids the gap between wait_for_activity() closing its stream
+                # and capture_until_silence() opening a new one (which clips speech onset).
+                audio_data = audio.capture_until_silence(max_duration=min(remaining, session_timeout))
 
-                if not activity or not session.is_active():
+                if not session.is_active():
                     print("[SESSION] Timed out, returning to wake word mode", flush=True)
                     session.clear()
                     print(f"\nSay '{wake_phrase}' to start a new conversation\n", flush=True)
                     continue
 
-                # Record the follow-up command
-                audio_data = audio.capture_until_silence()
                 if audio_data is None:
+                    # No speech detected before timeout
+                    if not session.is_active():
+                        session.clear()
+                        print(f"\nSay '{wake_phrase}' to start a new conversation\n", flush=True)
                     continue
-
                 transcript = stt.transcribe(audio_data, model="command")
                 if not transcript.strip():
                     continue

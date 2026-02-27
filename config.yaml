@@ -13,8 +13,8 @@ wake_word:
   fuzzy_match: true         # Also match "hey claude" with minor transcription errors
 
 stt:
-  wake_model: "tiny"    # Fast, cheap - wake word detection (72MB, from Azure CDN)
-  command_model: "small" # Better accuracy - full commands (461MB, from Azure CDN)
+  wake_model: "small"   # Better accuracy for wake phrase detection (461MB, from Azure CDN)
+  command_model: "small" # Full commands (461MB, from Azure CDN)
   language: "en"
 
 session:

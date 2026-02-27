@@ -70,26 +70,27 @@ class AudioCapture:
         except Exception:
             return False
 
-    def capture_until_silence(self) -> Optional[np.ndarray]:
+    def capture_until_silence(self, max_duration: Optional[float] = None) -> Optional[np.ndarray]:
         """
         Record from the microphone until a pause in speech is detected.
 
         Blocks until:
         - `silence_duration` seconds of continuous silence after speech, OR
-        - `max_duration` seconds total
+        - `max_duration` seconds total (defaults to self.max_duration)
 
         Returns:
             numpy float32 array at self.sample_rate, or None if nothing captured.
         """
+        effective_max = max_duration if max_duration is not None else self.max_duration
         frames_collected: list[np.ndarray] = []
         speech_started = False
         silence_frames = 0
         silence_frames_threshold = int(self.silence_duration * 1000 / FRAME_MS)
         start_time = time.monotonic()
 
-        # Ring buffer of recent frames for pre-roll (capture speech onset)
-        # We keep 300ms of audio before the VAD triggers, so we don't clip the start.
-        pre_roll_frames = collections.deque(maxlen=10)  # 10 * 30ms = 300ms
+        # Ring buffer of recent frames for pre-roll (capture speech onset).
+        # 600ms (20 × 30ms) gives plenty of lead-in so the start of speech isn't clipped.
+        pre_roll_frames = collections.deque(maxlen=20)  # 20 * 30ms = 600ms
 
         with sd.InputStream(
             samplerate=self.sample_rate,
@@ -100,7 +101,7 @@ class AudioCapture:
         ) as stream:
             while True:
                 elapsed = time.monotonic() - start_time
-                if elapsed > self.max_duration:
+                if elapsed > effective_max:
                     break
 
                 frame, _ = stream.read(self._frame_samples)
