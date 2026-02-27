@@ -119,8 +119,9 @@ def main():
         r = baby_rate if mode == "baby" else rate
         say(text, voice=v, rate=r, block=block)
 
-    # Load system prompt
+    # Load system prompts
     system_prompt = load_system_prompt()
+    baby_system_prompt = load_system_prompt("prompts/system_baby.md")
 
     # Build context line to append to each prompt (tells Claude where it's running)
     def build_context() -> str:
@@ -258,7 +259,7 @@ def main():
                 # ── Baby claude: direct SDK streaming, no tools, fast ─────────
                 full_text = run_baby_claude(
                     prompt=prompt,
-                    system_prompt=system_prompt,
+                    system_prompt=baby_system_prompt,
                     on_sentence=lambda s: speak(s, mode="baby"),
                 )
                 speak_text = full_text or "Done."

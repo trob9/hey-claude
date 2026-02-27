@@ -24,6 +24,13 @@ from anthropic import AnthropicVertex
 
 # Sentence boundary: ends with . ! ? followed by space or end of string
 _SENTENCE_END = re.compile(r'(?<=[.!?])\s+|(?<=[.!?])$')
+# Any XML-style tag
+_TAGS = re.compile(r'<[^>]+>')
+
+
+def _clean(text: str) -> str:
+    """Strip any XML tags (e.g. <SPEAK>, <STATUS>) and surrounding whitespace."""
+    return _TAGS.sub('', text).strip()
 
 
 def _split_sentences(text: str) -> tuple[list[str], str]:
@@ -96,7 +103,7 @@ def run_baby_claude(
                 if on_sentence:
                     complete, buffer = _split_sentences(buffer)
                     for sentence in complete:
-                        sentence = sentence.strip()
+                        sentence = _clean(sentence)
                         if sentence:
                             print(f"[SPEAK:BABY] {sentence}", flush=True)
                             on_sentence(sentence)
@@ -104,10 +111,11 @@ def run_baby_claude(
 
         # Speak any remaining buffer after stream ends
         if on_sentence and buffer.strip():
-            sentence = buffer.strip()
-            print(f"[SPEAK:BABY] {sentence}", flush=True)
-            on_sentence(sentence)
-            sentences_spoken.append(sentence)
+            sentence = _clean(buffer)
+            if sentence:
+                print(f"[SPEAK:BABY] {sentence}", flush=True)
+                on_sentence(sentence)
+                sentences_spoken.append(sentence)
 
     except Exception as e:
         print(f"[BABY] Error: {e}", file=sys.stderr)
