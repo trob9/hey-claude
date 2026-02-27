@@ -87,6 +87,7 @@ def main():
     parser.add_argument("--cwd", default=None, help="Working directory for Claude")
     parser.add_argument("--voice", default=None, help="macOS voice (e.g. Samantha, Alex)")
     parser.add_argument("--rate", type=int, default=None, help="TTS words per minute")
+    parser.add_argument("--model", default=None, help="Claude model override (e.g. claude-haiku-4-5)")
     args = parser.parse_args()
 
     # Load config
@@ -241,6 +242,7 @@ def main():
                 system_prompt=system_prompt,
                 session_id=session.session_id,
                 cwd=cwd,
+                model=args.model or None,
                 on_status=on_status,
             )
 

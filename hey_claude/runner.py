@@ -53,6 +53,7 @@ def run_claude(
     system_prompt: str,
     session_id: Optional[str] = None,
     cwd: Optional[str] = None,
+    model: Optional[str] = None,
     on_status: Optional[Callable[[str], None]] = None,
     on_tool_call: Optional[Callable[[str, dict], None]] = None,
     on_tool_result: Optional[Callable[[str, bool], None]] = None,
@@ -89,6 +90,9 @@ def run_claude(
 
     if session_id:
         cmd += ["--resume", session_id]
+
+    if model:
+        cmd += ["--model", model]
 
     # Inherit the full environment so Vertex AI vars pass through
     env = os.environ.copy()
