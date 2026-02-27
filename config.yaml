@@ -22,8 +22,14 @@ session:
   feedback_sound: true      # Play audio feedback on wake word detection
 
 tts:
-  voice: "Samantha"         # macOS voice. Options: Alex, Samantha, Daniel, Karen
+  voice: "Samantha"         # macOS voice for regular Claude
   rate: 185                 # Words per minute (default ~200, slower = clearer)
+
+baby_claude:
+  model: "claude-haiku-4-5" # Faster/cheaper model for simple queries
+  voice: "Junior"           # High-pitched child's voice
+  rate: 200                 # Slightly faster speech rate
+  wake_phrase: "hey baby claude"
 
 claude:
   binary: "/usr/local/bin/claude"

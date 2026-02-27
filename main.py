@@ -106,9 +106,17 @@ def main():
     wake_phrase = wake_cfg.get("phrase", "hey claude")
     session_timeout = float(session_cfg.get("timeout", 30))
 
-    # Convenience wrapper for TTS
-    def speak(text: str, rate: int = rate):
-        say(text, voice=voice, rate=rate)
+    # Baby Claude settings
+    baby_cfg = cfg.get("baby_claude", {})
+    baby_model = baby_cfg.get("model", "claude-haiku-4-5")
+    baby_voice = baby_cfg.get("voice", "Junior")
+    baby_rate = int(baby_cfg.get("rate", 200))
+
+    # Convenience wrapper for TTS — mode="baby" uses high-pitched Junior voice
+    def speak(text: str, rate: int = rate, mode: str = "normal"):
+        v = baby_voice if mode == "baby" else voice
+        r = baby_rate if mode == "baby" else rate
+        say(text, voice=v, rate=r)
 
     # Load system prompt
     system_prompt = load_system_prompt()
@@ -137,9 +145,15 @@ def main():
 
     session = Session(timeout=session_timeout)
 
+    # Track the mode ("normal" or "baby") for the current session so follow-up
+    # turns stay in the same mode without needing another wake phrase.
+    current_mode = "normal"
+    current_model = args.model or None
+
     print("\n" + "═" * 60)
     print("  hey-claude is ready")
-    print(f"  Say '{wake_phrase}' to start")
+    print(f"  '{wake_phrase}' → Sonnet (normal voice)")
+    print(f"  'hey baby claude' → Haiku (high-pitched voice)")
     print(f"  Ctrl+C to quit")
     print("═" * 60 + "\n", flush=True)
 
@@ -166,6 +180,8 @@ def main():
                 if not session.is_active():
                     print("[SESSION] Timed out, returning to wake word mode", flush=True)
                     session.clear()
+                    current_mode = "normal"
+                    current_model = args.model or None
                     print(f"\nSay '{wake_phrase}' to start a new conversation\n", flush=True)
                     continue
 
@@ -182,7 +198,7 @@ def main():
                 # Allow "goodbye", "stop", "exit" to end the session
                 if any(w in transcript.lower() for w in ["goodbye", "stop listening", "exit", "quit"]):
                     session.clear()
-                    speak("Goodbye!")
+                    speak("Goodbye!", mode=current_mode)
                     print("\nSession ended.\n", flush=True)
                     continue
 
@@ -192,40 +208,37 @@ def main():
 
             else:
                 # ── IDLE MODE ─────────────────────────────────────────────────
-                # Listen for the wake phrase. Record a short chunk, transcribe
-                # with the tiny model, check for "hey claude".
-
                 audio_data = audio.capture_until_silence()
                 if audio_data is None:
                     continue
 
-                # Quick transcription with tiny model
                 quick_transcript = stt.transcribe(audio_data, model="wake")
 
-                if not stt.contains_wake_phrase(quick_transcript, wake_phrase):
-                    # Not a wake phrase - ignore
+                # Check baby wake phrase FIRST (it contains "hey claude" as substring)
+                if stt.contains_baby_wake_phrase(quick_transcript):
+                    current_mode = "baby"
+                    current_model = baby_model
+                    print(f"[WAKE:BABY] Detected: '{quick_transcript}'", flush=True)
+                    speak("yeah?", mode="baby")
+                    command_part = stt.strip_baby_wake_phrase(quick_transcript)
+                elif stt.contains_wake_phrase(quick_transcript, wake_phrase):
+                    current_mode = "normal"
+                    current_model = args.model or None
+                    print(f"[WAKE] Detected: '{quick_transcript}'", flush=True)
+                    speak("How can I help?")
+                    command_part = stt.strip_wake_phrase(quick_transcript, wake_phrase)
+                else:
                     continue
 
-                # Wake phrase detected!
-                print(f"[WAKE] Detected: '{quick_transcript}'", flush=True)
-
-                # Audio acknowledgement
-                speak("How can I help?", rate=200)
-
-                # Strip the wake phrase - is there a command in the same utterance?
-                command_part = stt.strip_wake_phrase(quick_transcript, wake_phrase)
-
                 if not command_part:
-                    # Wake phrase only - wait for the actual command
-                    print("[IDLE] Wake phrase detected, waiting for command...", flush=True)
+                    print("[IDLE] Wake phrase only, waiting for command...", flush=True)
                     audio_data = audio.capture_until_silence()
                     if audio_data is None:
                         continue
-                    # Transcribe the command with the better model
                     command_part = stt.transcribe(audio_data, model="command")
 
                 if not command_part.strip():
-                    speak("I didn't catch that, try again.")
+                    speak("I didn't catch that, try again.", mode=current_mode)
                     continue
 
                 prompt = command_part + build_context()
@@ -242,7 +255,7 @@ def main():
                 system_prompt=system_prompt,
                 session_id=session.session_id,
                 cwd=cwd,
-                model=args.model or None,
+                model=current_model,
                 on_status=on_status,
             )
 
@@ -259,12 +272,12 @@ def main():
                 raw_user = prompt.split("[End of history")[- 1].split("[Context:")[0].strip()
                 session.add_history(raw_user, speak_text)
 
-            # Speak the final response
+            # Speak the final response in the correct mode's voice
             if speak_text:
-                speak(speak_text)
-                print(f"[SPEAK] {speak_text}", flush=True)
+                speak(speak_text, mode=current_mode)
+                print(f"[SPEAK:{current_mode.upper()}] {speak_text}", flush=True)
             else:
-                speak("Done.")
+                speak("Done.", mode=current_mode)
 
         except KeyboardInterrupt:
             break

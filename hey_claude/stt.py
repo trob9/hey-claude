@@ -95,6 +95,38 @@ class STT:
 
         return result.get("text", "").strip()
 
+    def contains_baby_wake_phrase(self, text: str) -> bool:
+        """Check if transcript contains the baby claude wake phrase."""
+        text_lower = text.lower().strip()
+        if not text_lower:
+            return False
+        alternates = [
+            "hey baby claude",
+            "hey baby cloud",
+            "hey baby claud",
+            "hey baby clawed",
+            "baby claude",
+            "baby cloud",
+        ]
+        return any(alt in text_lower for alt in alternates)
+
+    def strip_baby_wake_phrase(self, text: str) -> str:
+        """Remove the baby wake phrase from the start of a transcription."""
+        text_lower = text.lower()
+        alternates = [
+            "hey baby claude",
+            "hey baby cloud",
+            "hey baby claud",
+            "hey baby clawed",
+            "baby claude",
+            "baby cloud",
+        ]
+        for alt in alternates:
+            if text_lower.startswith(alt):
+                remainder = text[len(alt):].strip().lstrip(",.!? ")
+                return remainder
+        return text
+
     def contains_wake_phrase(self, text: str, phrase: str = "hey claude") -> bool:
         """
         Check if transcribed text contains the wake phrase.
