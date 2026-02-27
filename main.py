@@ -114,10 +114,10 @@ def main():
     baby_rate = int(baby_cfg.get("rate", 200))
 
     # Convenience wrapper for TTS — mode="baby" uses high-pitched Junior voice
-    def speak(text: str, rate: int = rate, mode: str = "normal"):
+    def speak(text: str, rate: int = rate, mode: str = "normal", block: bool = True):
         v = baby_voice if mode == "baby" else voice
         r = baby_rate if mode == "baby" else rate
-        say(text, voice=v, rate=r)
+        say(text, voice=v, rate=r, block=block)
 
     # Load system prompt
     system_prompt = load_system_prompt()
@@ -213,14 +213,15 @@ def main():
                     current_mode = "baby"
                     current_model = baby_model
                     print(f"[WAKE:BABY] Detected: '{quick_transcript}'", flush=True)
-                    speak("yeah?", mode="baby")
                     command_part = stt.strip_baby_wake_phrase(quick_transcript)
+                    # Non-blocking: feedback plays while mic is already open for the command
+                    speak("yeah?", mode="baby", block=False)
                 elif stt.contains_wake_phrase(quick_transcript, wake_phrase):
                     current_mode = "normal"
                     current_model = args.model or None
                     print(f"[WAKE] Detected: '{quick_transcript}'", flush=True)
-                    speak("How can I help?")
                     command_part = stt.strip_wake_phrase(quick_transcript, wake_phrase)
+                    speak("How can I help?", block=False)
                 else:
                     continue
 
